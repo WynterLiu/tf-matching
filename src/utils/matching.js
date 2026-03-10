@@ -145,75 +145,77 @@ export function getDayElementBonus(userDayElement, memberDayElement) {
 }
 
 // ── Part2 人格得分 ─────────────────────────────────────────────
-// 每题对每个成员：高匹配4分，中匹配3分，低2分，不匹配1分
-// answers: [q1选项index, q2, q3, q4, q5]
+// 高匹配5分，中匹配3分，不匹配1分（分差扩大，最高25→缩放到20）
 
-// Q1 五行行动风格 → 与成员日主五行匹配
-const Q1_ELEMENT = ['火','水','土','木']; // 选项A/B/C/D对应五行
+// Q1 行动风格 → 与成员日主五行匹配
+// A冲→火, B沉淀→水, C计划→土, D顺势→木
+const Q1_ELEMENT = ['火','水','土','木'];
 
-// Q2 情感需求 → 与成员星座匹配
-const Q2_ZODIAC_GROUPS = [
-  ['天蝎座','处女座'],        // A 深情型
-  ['射手座','双子座'],        // B 自由型
-  ['处女座','摩羯座','水瓶座'],// C 稳定型
-  ['狮子座','金牛座','白羊座'],// D 探索型
-];
+// Q2 情感需求 → 与成员星座元素匹配（覆盖全部12星座）
+// A深度理解→水象, B自由空间→风象, C稳定踏实→土象, D激情新鲜→火象
+const Q2_ELEMENT_MAP = ['水','风','土','火'];
 
-// Q3 外在气质 → 与成员生命数字匹配
+// Q3 自身能量 → 与成员生命数字匹配（覆盖全部数字）
 const Q3_LIFENUM_GROUPS = [
-  [5,6,2],    // A 月亮型
-  [9,7,4],    // B 水星型
-  [1,8],      // C 太阳型
-  [3,5,11],   // D 冥王型
+  [2,6,9,22],   // A 月亮·温柔治愈
+  [4,7,1,11],   // B 水星·敏锐善思
+  [1,3,8],      // C 太阳·明朗自信
+  [3,5,11,7],   // D 冥王·神秘深邃
 ];
 
-// Q4 能量来源 → 与成员大类匹配
+// Q4 关系角色 → 与成员id匹配（覆盖全部37人）
 const Q4_MEMBER_TYPES = {
-  A: ['mjq','yhx','dcx','lyw','syx','zzx','djx','yyh','zyy','ylh'], // 阳·外向
-  B: ['wjk','hjl','sxh','gjc','wlj','rxz'],                         // 阴·内向
-  C: ['wy','yyx','tyk','mzc','zjh'],                                 // 阳·创造
-  D: ['syx','lyw','zh','zj','zzy2','ctr'],                          // 中性平衡
+  0: ['mjq','yhx','zzx','djx','yyh','wlj','cyh','ybw','zyr','lyd2'],  // 主动推进
+  1: ['wjk','hjl','sxh','gjc','zqh','nwc','wzc','csh','mzc','zjh'],   // 默默守护
+  2: ['wy','yyx','tyk','zzm','hs','zhr','cjm','zh','zj'],              // 点燃创意
+  3: ['syx','zzy','lyw','zzy2','wsr','yhb','zgy','dcx','zzx'],         // 平衡全场
 };
 
-// Q5 命运观 → 与成员生命数字匹配
+// Q5 缘分观 → 与成员生命数字匹配（覆盖全部数字）
 const Q5_LIFENUM_GROUPS = [
-  [1,8],      // A 命主型
-  [2,9,4],    // B 缘分型
-  [4,7],      // C 理性型
-  [3,5,11],   // D 直觉型
+  [1,8,3],      // A 主动创造缘分
+  [2,6,9,22],   // B 顺其自然
+  [4,7,1],      // C 半信半疑·相信努力
+  [3,5,11,2],   // D 直觉敏感
 ];
 
 export function getPart2Score(answers, member) {
   let score = 0;
 
-  // Q1: 五行行动 vs 日主五行
+  // Q1: 行动风格 vs 日主五行（高5，中3，低1）
   const q1Element = Q1_ELEMENT[answers[0]];
-  if (q1Element === member.dayElement) score += 4;
+  if (q1Element === member.dayElement) score += 5;
   else if (SHENG[q1Element] === member.dayElement || SHENG[member.dayElement] === q1Element) score += 3;
-  else score += 2;
+  else score += 1;
 
-  // Q2: 情感需求 vs 星座
-  const q2Group = Q2_ZODIAC_GROUPS[answers[1]] || [];
-  if (q2Group.includes(member.zodiac)) score += 4;
-  else score += 2;
+  // Q2: 情感需求 vs 星座元素（高5，相邻3，低1）
+  const q2Element = Q2_ELEMENT_MAP[answers[1]];
+  if (q2Element === member.element) score += 5;
+  else if (
+    (q2Element==='火' && member.element==='风') ||
+    (q2Element==='风' && member.element==='火') ||
+    (q2Element==='水' && member.element==='土') ||
+    (q2Element==='土' && member.element==='水')
+  ) score += 3;
+  else score += 1;
 
-  // Q3: 气质 vs 生命数字
+  // Q3: 自身能量 vs 生命数字（高5，低1）
   const q3Group = Q3_LIFENUM_GROUPS[answers[2]] || [];
-  const memberNum = member.lifeNum > 9 ? member.lifeNum : member.lifeNum;
-  if (q3Group.includes(memberNum)) score += 4;
-  else score += 2;
+  if (q3Group.includes(member.lifeNum)) score += 5;
+  else score += 1;
 
-  // Q4: 能量 vs 成员类型
-  const q4Key = ['A','B','C','D'][answers[3]];
-  if ((Q4_MEMBER_TYPES[q4Key] || []).includes(member.id)) score += 4;
-  else score += 2;
+  // Q4: 关系角色 vs 成员id（高5，低1）
+  const q4Group = Q4_MEMBER_TYPES[answers[3]] || [];
+  if (q4Group.includes(member.id)) score += 5;
+  else score += 1;
 
-  // Q5: 命运观 vs 生命数字
+  // Q5: 缘分观 vs 生命数字（高5，低1）
   const q5Group = Q5_LIFENUM_GROUPS[answers[4]] || [];
-  if (q5Group.includes(memberNum)) score += 4;
-  else score += 2;
+  if (q5Group.includes(member.lifeNum)) score += 5;
+  else score += 1;
 
-  return score; // 最高20分
+  // 总分最高25，缩放到20
+  return Math.round((score / 25) * 20);
 }
 
 function normalizeZodiacName(zodiac) {
